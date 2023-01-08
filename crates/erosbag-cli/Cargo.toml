@@ -1,0 +1,20 @@
+[package]
+name = "erosbag-cli"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CLI tool for Rosbag operations"
+
+
+[dependencies]
+erosbag = { version = "0.0.1-alpha.1", path = "../erosbag", registry = "custom" }
+ecoord = { workspace = true }
+epoint = { workspace = true }
+
+clap = { workspace = true, features = ["derive"] }
+dotenvy = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }

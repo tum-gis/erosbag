@@ -1,0 +1,31 @@
+[package]
+name = "erosbag-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core of the erosbag library"
+
+[dependencies]
+epoint = { version = "0.2.0-alpha.1", workspace = true, registry = "custom" }
+ecoord = { version = "0.2.0-alpha.1", workspace = true, registry = "custom" }
+
+diesel = { workspace = true, features = ["sqlite", "r2d2"] }
+diesel_migrations = { workspace = true, features = ["sqlite"] }
+serde = { workspace = true, features = ["derive"] }
+serde_derive = { workspace = true }
+serde_repr = { workspace = true }
+serde_yaml = { workspace = true }
+serde-big-array = { workspace = true }
+cdr = { workspace = true }
+thiserror = { workspace = true }
+polars = { workspace = true, features = ["lazy", "ndarray", "dtype-categorical"] }
+ndarray = { workspace = true }
+indextree = { workspace = true }
+rayon = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+nalgebra = { workspace = true }
+chrono = { workspace = true }
+itertools = { workspace = true }

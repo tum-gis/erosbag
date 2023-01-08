@@ -1,0 +1,21 @@
+[package]
+name = "erosbag-transform"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Transformations for the erosbag library"
+
+[dependencies]
+erosbag-core = { version = "0.0.1-alpha.1", path = "../erosbag-core", registry = "custom" }
+
+epoint = { workspace = true }
+ecoord = { workspace = true }
+
+thiserror = { workspace = true }
+walkdir = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+nalgebra = { workspace = true }
+chrono = { workspace = true }
