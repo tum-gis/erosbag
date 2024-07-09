@@ -7,7 +7,9 @@ use crate::ros_messages::{MessageType, RosMessageType};
 
 use serde_derive::{Deserialize, Serialize};
 
+use crate::bagfile::point_cloud_extensions::RosPointCloudColumnType;
 use chrono::{DateTime, Utc};
+use image::{ImageBuffer, Rgb};
 use itertools::izip;
 use nalgebra::Point3;
 
@@ -39,6 +41,21 @@ pub struct Image {
 impl MessageType for Image {
     fn ros_message_type(&self) -> &RosMessageType {
         &RosMessageType::SensorMessagesImage
+    }
+}
+
+impl From<Image> for eimage::Image {
+    fn from(item: Image) -> Self {
+        let buffer: Vec<u8> = item
+            .data
+            .chunks(3)
+            .flat_map(|c| [c[2], c[1], c[0]])
+            .collect();
+
+        let image_buffer: ImageBuffer<Rgb<u8>, Vec<u8>> =
+            ImageBuffer::from_vec(item.width, item.height, buffer).unwrap();
+
+        eimage::Image::new(image_buffer, item.header.stamp.into())
     }
 }
 
@@ -112,20 +129,28 @@ impl MessageType for PointCloud2 {
 
 impl From<PointCloud2> for epoint::PointCloud {
     fn from(item: PointCloud2) -> Self {
-        let mut point_data_column = item.get_epoint();
-        let frame_id: Vec<String> = vec![item.header.frame_id.clone(); point_data_column.len()];
-        point_data_column.frame_id = Some(frame_id);
-        let timestamp: Vec<DateTime<Utc>> = vec![item.header.stamp.into(); point_data_column.len()];
-        point_data_column.timestamp = Some(timestamp);
+        let mut point_data = item.get_epoint();
+        let frame_id: Vec<String> = vec![item.header.frame_id.clone(); point_data.len()];
+        point_data.frame_id = Some(frame_id);
+        let timestamp: Vec<DateTime<Utc>> = vec![item.header.stamp.into(); point_data.len()];
+        point_data.timestamp = Some(timestamp);
+        let beam_origin: Vec<Point3<f64>> = vec![Point3::origin(); point_data.len()];
+        point_data.beam_origin = Some(beam_origin);
 
-        let point_cloud_info = epoint::PointCloudInfo::new(None);
-
-        epoint::PointCloud::new(
-            point_data_column,
-            point_cloud_info,
+        let mut point_cloud = epoint::PointCloud::new(
+            point_data,
+            epoint::PointCloudInfo::new(None),
             ecoord::ReferenceFrames::default(),
         )
-        .unwrap()
+        .unwrap();
+
+        let point_id: Vec<u32> = (0..point_cloud.size()).map(|x| x as u32).collect();
+        point_cloud
+            .point_data
+            .add_u32_column(RosPointCloudColumnType::RosPointId.as_str(), point_id)
+            .expect("Extending the id column should work");
+
+        point_cloud
     }
 }
 
@@ -140,7 +165,8 @@ impl PointCloud2 {
 
         let intensity = self.get_field_as_f32("intensity");
 
-        epoint::PointDataColumns::new(points, None, None, Some(intensity)).unwrap()
+        epoint::PointDataColumns::new(points, None, None, None, Some(intensity), None, None)
+            .unwrap()
     }
 
     pub fn get_field_as_f32(&self, name: &str) -> Vec<f32> {
@@ -160,7 +186,6 @@ impl PointCloud2 {
 
         let num_entries = self.data.len() as u32 / self.point_step;
         let values: Vec<f32> = (0..num_entries)
-            .into_iter()
             .map(|current_point_index| {
                 let start: usize =
                     (current_point_index * self.point_step + current_field.offset) as usize;

@@ -9,9 +9,10 @@ use crate::rosbag_metadata::{
 use crate::error::Error;
 use crate::ros_messages::{MessageType, Time};
 
+use crate::ros_messages::sensor_msgs::NavSatFix;
 use crate::topics::qos_profile::QualityOfServiceProfile;
 use crate::topics::topic::TopicMetadata;
-use crate::Error::ContainsNoRosbagFile;
+use crate::Error::{ContainsNoRosbagFile, MultipleBagfilesNotSupported};
 use chrono::{DateTime, Utc};
 use ecoord::{FrameId, InterpolationMethod, TransformId};
 use serde::Serialize;
@@ -33,6 +34,9 @@ impl Rosbag {
         if bagfiles.is_empty() {
             return Err(ContainsNoRosbagFile);
         }
+        if bagfiles.len() > 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
 
         Ok(Self {
             directory_path: directory_path.as_ref().to_owned(),
@@ -41,15 +45,14 @@ impl Rosbag {
         })
     }
 
-    pub fn create_topic(&self, name: &String, metadata: &TopicMetadata) {
-        assert_eq!(
-            self.bagfiles.len(),
-            1,
-            "Currently only a single bagfile is supported for this operation"
-        );
-        let bagfile = self.bagfiles.first().unwrap();
-        bagfile.create_topic(name, metadata);
+    pub fn create_topic(&self, name: &String, metadata: &TopicMetadata) -> Result<(), Error> {
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        bagfile.create_topic(name, metadata)?;
 
+        Ok(())
         // TopicId::from(0)
     }
 
@@ -57,26 +60,47 @@ impl Rosbag {
         let t: HashSet<String> = self
             .bagfiles
             .iter()
-            .flat_map(|f| f.get_all_topic_names())
+            .flat_map(|f| f.get_all_topic_names().unwrap())
             .collect();
         t
     }
 
-    pub fn get_images(&self) {
-        todo!("TODO return images")
+    pub fn get_start_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        let start_date = bagfile.get_start_date_time()?;
+        Ok(start_date)
     }
 
-    pub fn get_visualization_markers(&self, topic_name: &String) {
-        assert_eq!(
-            self.bagfiles.len(),
-            1,
-            "Currently only a single bagfile is supported for this operation"
-        );
-        let bagfile = self.bagfiles.first().unwrap();
-        bagfile.get_visualization_markers(topic_name);
+    pub fn get_stop_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        let stop_date = bagfile.get_stop_date_time()?;
+        Ok(stop_date)
     }
 
-    fn generate_metadata(&self) -> RosbagMetaDataDocument {
+    pub fn get_images(
+        &self,
+        topic_name: &String,
+        start_time: &Option<DateTime<Utc>>,
+        stop_time: &Option<DateTime<Utc>>,
+    ) -> Result<eimage::ImageSeries, Error> {
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        let image_series = bagfile.get_images(topic_name, start_time, stop_time)?;
+        Ok(image_series)
+    }
+
+    pub fn get_visualization_markers(&self, topic_name: &String) -> Result<(), Error> {
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        bagfile.get_visualization_markers(topic_name)?;
+        Ok(())
+    }
+
+    fn generate_metadata(&self) -> Result<RosbagMetaDataDocument, Error> {
         let relative_file_paths: Vec<String> = self
             .bagfiles
             .iter()
@@ -99,12 +123,12 @@ impl Rosbag {
                     .into_string()
                     .unwrap(),
                 starting_time: StartingTimeElement {
-                    nanoseconds_since_epoch: f.get_start_time().unwrap_or(0),
+                    nanoseconds_since_epoch: f.get_start_time().unwrap().unwrap_or_default(),
                 },
                 duration: DurationElement {
-                    nanoseconds: f.get_duration().unwrap_or(0),
+                    nanoseconds: f.get_duration().unwrap().unwrap_or_default(),
                 },
-                message_count: f.get_message_count(),
+                message_count: f.get_message_count().unwrap(),
             })
             .collect();
 
@@ -113,13 +137,13 @@ impl Rosbag {
                 .bagfiles
                 .last()
                 .unwrap()
-                .get_stop_time()
+                .get_stop_time()?
                 .unwrap_or_default()
                 - self
                     .bagfiles
                     .first()
                     .unwrap()
-                    .get_start_time()
+                    .get_start_time()?
                     .unwrap_or_default(),
         };
 
@@ -130,6 +154,7 @@ impl Rosbag {
             .first()
             .unwrap()
             .get_all_topics()
+            .unwrap()
             .iter()
             .map(|t| TopicWithMessageCountElement {
                 topic_metadata: TopicMetaDataElement {
@@ -158,33 +183,35 @@ impl Rosbag {
             },
         };
 
-        metadata
+        Ok(metadata)
     }
 
-    pub fn append_transform_messages(&mut self, reference_frames: ecoord::ReferenceFrames) {
-        assert_eq!(
-            self.bagfiles.len(),
-            1,
-            "Currently only a single bagfile is supported for this operation"
-        );
+    pub fn append_transform_messages(
+        &mut self,
+        reference_frames: ecoord::ReferenceFrames,
+    ) -> Result<(), Error> {
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
 
-        let bagfile = self.bagfiles.first().unwrap();
-        bagfile.append_transform_messages(reference_frames);
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        bagfile.append_transform_messages(reference_frames)?;
+
+        Ok(())
     }
 
     pub fn append_message(
         &mut self,
         topic_name: &String,
         ros_message: &(impl MessageType + Time + Serialize),
-    ) {
-        assert_eq!(
-            self.bagfiles.len(),
-            1,
-            "Currently only a single bagfile is supported for this operation"
-        );
+    ) -> Result<(), Error> {
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
 
-        let bagfile = self.bagfiles.first().unwrap();
-        bagfile.append_message(topic_name, ros_message);
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        bagfile.append_message(topic_name, ros_message)?;
+        Ok(())
     }
 
     pub fn set_qos_profile(
@@ -192,9 +219,10 @@ impl Rosbag {
         topic_name: &String,
         offered_qos_profile: &QualityOfServiceProfile,
     ) {
-        self.bagfiles
-            .iter()
-            .for_each(|f| f.set_qos_profile(topic_name, offered_qos_profile));
+        self.bagfiles.iter().for_each(|f| {
+            f.set_qos_profile(topic_name, offered_qos_profile)
+                .expect("should work")
+        });
     }
 
     pub fn get_transforms(
@@ -202,26 +230,27 @@ impl Rosbag {
         start_time: &Option<DateTime<Utc>>,
         stop_time: &Option<DateTime<Utc>>,
     ) -> Result<ecoord::ReferenceFrames, Error> {
-        assert_eq!(
-            self.bagfiles.len(),
-            1,
-            "Currently only a single bagfile is supported for this operation"
-        );
-        let bagfile = self.bagfiles.first().unwrap();
-        bagfile.get_transforms(start_time, stop_time)
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
+
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+        let reference_rames = bagfile.get_transforms(start_time, stop_time)?;
+
+        Ok(reference_rames)
     }
 
+    /// Returns the point cloud on all topics for a time window between start_time (inclusive) and
+    /// stop_time (exclusive).
     pub fn get_point_clouds(
         &self,
         start_time: &Option<DateTime<Utc>>,
         stop_time: &Option<DateTime<Utc>>,
     ) -> Result<epoint::PointCloud, Error> {
-        assert_eq!(
-            self.bagfiles.len(),
-            1,
-            "Currently only a single bagfile is supported for this operation"
-        );
-        let bagfile = self.bagfiles.first().unwrap();
+        if self.bagfiles.len() != 1 {
+            return Err(MultipleBagfilesNotSupported);
+        }
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
 
         let mut point_cloud = bagfile.get_all_point_cloud(start_time, stop_time)?;
         let mut reference_frames = self.get_transforms(start_time, stop_time)?;
@@ -232,8 +261,15 @@ impl Rosbag {
         Ok(point_cloud)
     }
 
+    pub fn get_nav_sat_messages(&self, topic_name: &String) -> Result<Vec<NavSatFix>, Error> {
+        let bagfile = self.bagfiles.first().ok_or(ContainsNoRosbagFile)?;
+
+        let messages = bagfile.get_nav_sat_fix_messages_of_topic(topic_name, &None, &None)?;
+        Ok(messages)
+    }
+
     pub fn close(self) {
-        let metadata = self.generate_metadata();
+        let metadata = self.generate_metadata().unwrap();
         let document_path = self.directory_path.join(PathBuf::from("metadata.yaml"));
         let file = OpenOptions::new()
             .create(true)

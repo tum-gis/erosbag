@@ -1,6 +1,6 @@
-# erosbag
+# erosbag-transform
 
-A Rust library for processing ROS2 bags.
+Supplementary operations for processing ROS2 bags.
 
 > [!WARNING]  
 > The library is at an early stage of development.

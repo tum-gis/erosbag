@@ -1,13 +1,20 @@
 use ecoord::io::EcoordReader;
 use erosbag_core::RosbagOpenOptions;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{error, info};
 use walkdir::WalkDir;
 
 pub fn append_reference_frames(
-    reference_frames_directory_path: PathBuf,
-    rosbag_directory_path: PathBuf,
+    reference_frames_directory_path: impl AsRef<Path>,
+    rosbag_directory_path: impl AsRef<Path>,
 ) {
+    info!("Start creation");
+    info!(
+        "Reference frames directory path: {}",
+        reference_frames_directory_path.as_ref().display()
+    );
+    info!("Rosbag path: {}", rosbag_directory_path.as_ref().display());
+
     let mut rosbag = RosbagOpenOptions::new()
         .create_new(true)
         .open(&rosbag_directory_path)
@@ -22,12 +29,19 @@ pub fn append_reference_frames(
     let ecoord_paths: Vec<PathBuf> = paths
         .into_iter()
         .map(|p| PathBuf::from(p.path()))
-        .filter(|p| p.is_file() && p.extension().unwrap() == "ecoo")
+        .filter(|p| {
+            p.is_file()
+                && p.file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .ends_with("ecoord.json")
+        })
         .collect();
     if ecoord_paths.is_empty() {
         error!(
             "No ecoord documents found in {}",
-            reference_frames_directory_path.display()
+            reference_frames_directory_path.as_ref().display()
         );
         return;
     }
@@ -35,7 +49,10 @@ pub fn append_reference_frames(
     for current_ecoord_path in ecoord_paths {
         info!("Read:{}", current_ecoord_path.display());
 
-        let current_reference_frames = EcoordReader::new(current_ecoord_path).finish().unwrap();
+        let current_reference_frames = EcoordReader::from_path(current_ecoord_path)
+            .unwrap()
+            .finish()
+            .unwrap();
         rosbag.append_transform_messages(current_reference_frames);
 
         info!("read it");
@@ -53,4 +70,6 @@ pub fn append_reference_frames(
     //.filter(|p| p.is_file())
     //.filter(|p| p.file_name().unwrap() == "frames")
     .collect();*/
+
+    info!("Completed.");
 }

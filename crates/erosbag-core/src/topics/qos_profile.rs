@@ -31,9 +31,9 @@ impl DateTime {
     };
 }
 
-/// QoS History policy.
+/// [`QoS History policy`]
 ///
-/// []: https://github.com/ros2/rmw/blob/31c6fd094c8bd01d0a231856df1bd9a476bea26a/rmw/include/rmw/types.h#L408
+/// [`QoS History policy`]: https://github.com/ros2/rmw/blob/31c6fd094c8bd01d0a231856df1bd9a476bea26a/rmw/include/rmw/types.h#L408
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug, Clone, Hash)]
 #[repr(u8)]
 pub enum HistoryPolicy {

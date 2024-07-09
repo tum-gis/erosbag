@@ -5,10 +5,10 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Transformations for the erosbag library"
+description = "Supplementary operations for processing ROS2 bags."
 
 [dependencies]
-erosbag-core = { version = "0.0.1-alpha.1", path = "../erosbag-core", registry = "custom" }
+erosbag-core = { version = "0.0.1-alpha.3", path = "../erosbag-core" }
 
 epoint = { workspace = true }
 ecoord = { workspace = true }

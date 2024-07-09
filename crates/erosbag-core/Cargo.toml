@@ -5,14 +5,16 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Core of the erosbag library"
+description = "Core primitives and operations for processing ROS2 bags."
 
 [dependencies]
-epoint = { version = "0.2.0-alpha.1", workspace = true, registry = "custom" }
-ecoord = { version = "0.2.0-alpha.1", workspace = true, registry = "custom" }
+epoint = { workspace = true }
+eimage = { workspace = true }
+ecoord = { workspace = true }
 
 diesel = { workspace = true, features = ["sqlite", "r2d2"] }
 diesel_migrations = { workspace = true, features = ["sqlite"] }
+r2d2 = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_derive = { workspace = true }
 serde_repr = { workspace = true }
@@ -29,3 +31,4 @@ tracing-subscriber = { workspace = true }
 nalgebra = { workspace = true }
 chrono = { workspace = true }
 itertools = { workspace = true }
+image = { workspace = true }

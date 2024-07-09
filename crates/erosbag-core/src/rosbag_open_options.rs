@@ -15,7 +15,7 @@ use ecoord::{InterpolationMethod, TransformInfo};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use crate::error::Error;
@@ -25,6 +25,12 @@ pub struct RosbagOpenOptions {
     read_write: bool,
     create_new: bool,
     transform_interpolation_method: HashMap<ecoord::TransformId, InterpolationMethod>,
+}
+
+impl Default for RosbagOpenOptions {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RosbagOpenOptions {
@@ -56,7 +62,7 @@ impl RosbagOpenOptions {
         self
     }
 
-    pub fn open(&self, directory_path: &PathBuf) -> Result<Rosbag, Error> {
+    pub fn open(&self, directory_path: impl AsRef<Path>) -> Result<Rosbag, Error> {
         if !self.read_write && !self.create_new {
             return Err(Error::InvalidInput);
         }
@@ -72,34 +78,34 @@ impl RosbagOpenOptions {
         Err(Error::InvalidInput)
     }
 
-    fn create_new_rosbag(&self, directory_path: &PathBuf) -> Result<Rosbag, Error> {
+    fn create_new_rosbag(&self, directory_path: impl AsRef<Path>) -> Result<Rosbag, Error> {
         if self.create_new {
-            fs::create_dir_all(directory_path).unwrap();
+            fs::create_dir_all(directory_path.as_ref()).unwrap();
         }
 
-        let filename_path = self.get_filename_path(directory_path, 0);
-        let rosbag_file = RosbagFile::new(directory_path.clone(), filename_path).unwrap();
+        let filename_path = self.get_filename_path(directory_path.as_ref(), 0);
+        let rosbag_file = RosbagFile::new(directory_path.as_ref(), filename_path).unwrap();
 
         let bagfiles = vec![rosbag_file];
         let topics = HashMap::new();
-        let rosbag = Rosbag::new(directory_path.clone(), bagfiles, topics)?;
+        let rosbag = Rosbag::new(directory_path.as_ref(), bagfiles, topics)?;
         Ok(rosbag)
     }
 
-    fn read_write_rosbag(&self, directory_path: &PathBuf) -> Result<Rosbag, Error> {
-        if !directory_path.is_dir() {
+    fn read_write_rosbag(&self, directory_path: impl AsRef<Path>) -> Result<Rosbag, Error> {
+        if !directory_path.as_ref().is_dir() {
             return Err(Error::RosbagPathIsNoDirectory);
         }
 
         let mut bagfiles: Vec<RosbagFile> = vec![];
         let mut file_index = 0;
         loop {
-            let filename_path = self.get_filename_path(directory_path, file_index);
-            let rosbag_file_path = directory_path.join(&filename_path);
+            let filename_path = self.get_filename_path(directory_path.as_ref(), file_index);
+            let rosbag_file_path = directory_path.as_ref().join(&filename_path);
 
             if rosbag_file_path.exists() {
                 let rosbag_file =
-                    RosbagFile::new(directory_path.clone(), filename_path.clone()).unwrap();
+                    RosbagFile::new(directory_path.as_ref(), filename_path.clone()).unwrap();
                 bagfiles.push(rosbag_file);
                 file_index += 1;
             } else {
@@ -132,11 +138,11 @@ impl RosbagOpenOptions {
         // TODO read and parse topics
         let topics = HashMap::new();
 
-        let rosbag = Rosbag::new(directory_path.clone(), bagfiles, topics)?;
+        let rosbag = Rosbag::new(directory_path.as_ref(), bagfiles, topics)?;
         Ok(rosbag)
     }
 
-    fn get_filename_path(&self, directory_path: &PathBuf, file_index: u16) -> PathBuf {
+    fn get_filename_path(&self, directory_path: impl AsRef<Path>, file_index: u16) -> PathBuf {
         let bag_name = self.get_rosbag_name(directory_path);
         let file_index: String = file_index.to_string();
         let bagfile_path =
@@ -144,8 +150,13 @@ impl RosbagOpenOptions {
         bagfile_path
     }
 
-    fn get_rosbag_name(&self, directory_path: &PathBuf) -> String {
-        let bag_name = directory_path.file_name().unwrap().to_str().unwrap();
+    fn get_rosbag_name(&self, directory_path: impl AsRef<Path>) -> String {
+        let bag_name = directory_path
+            .as_ref()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap();
         bag_name.to_string()
     }
 }

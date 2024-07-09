@@ -16,37 +16,45 @@ pub enum Commands {
         rosbag_directory_path: String,
     },
 
-    /// Extract the transforms to an ecoord document
+    /// Extract the transforms
     ExtractTransforms {
+        /// Path to the ROS2 bag
+        #[clap(long)]
+        rosbag_directory_path: String,
+
+        /// Path to the output ecoord file
+        #[clap(long)]
+        output_ecoord_path: String,
+    },
+
+    /// Extract the point clouds
+    ExtractPointClouds {
         /// Path to the ROS2 bag
         #[clap(long)]
         rosbag_directory_path: String,
 
         /// Path to the ecoord document
         #[clap(long)]
-        output_ecoord_file_path: String,
+        ecoord_file_path: Option<String>,
+
+        /// Target frame id of extracted point cloud
+        #[clap(long)]
+        frame_id: Option<String>,
+
+        /// Path to the output epoint file containing the extracted point clouds
+        #[clap(long)]
+        output_epoint_path: String,
     },
 
-    /// Extract point clouds accumulated over time
-    ExtractPointClouds {
-        /// Path to the ROS2 bag
-        #[clap(long)]
-        rosbag_directory_path: String,
-
-        /// Path to output directory of extracted point clouds
-        #[clap(long)]
-        output_directory_path: String,
-    },
-
-    /// Extract images
+    /// Extract the images
     ExtractImages {
         /// Path to the ROS2 bag
         #[clap(long)]
         rosbag_directory_path: String,
 
-        /// Path to output directory of extracted images
+        /// Path to output eimage file containing the extracted images
         #[clap(long)]
-        output_directory_path: String,
+        output_eimage_path: String,
     },
 
     /// Append the reference frames to a ROS bag

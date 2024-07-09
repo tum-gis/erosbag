@@ -1,6 +1,6 @@
-# erosbag
+# erosbag-cli
 
-A Rust library for processing ROS2 bags.
+CLI tool for processing ROS2 bags.
 
 > [!WARNING]  
 > The library is at an early stage of development.

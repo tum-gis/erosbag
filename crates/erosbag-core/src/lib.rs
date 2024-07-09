@@ -19,4 +19,7 @@ pub use rosbag::Rosbag;
 #[doc(inline)]
 pub use rosbag_open_options::RosbagOpenOptions;
 
+#[doc(inline)]
+pub use bagfile::point_cloud_extensions::RosPointCloudColumnType;
+
 pub const SQLITE3_EXTENSION: &str = "db3";
