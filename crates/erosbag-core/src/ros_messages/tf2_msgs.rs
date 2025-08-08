@@ -1,7 +1,7 @@
 ///! Implementation of the [`tf2_msgs`] messages of ROS2.
 ///!
 ///! [`tf2_msgs`]: https://github.com/ros2/geometry2/blob/rolling/tf2_msgs/msg
-use crate::ros_messages::{geometry_msgs, MessageType, RosMessageType};
+use crate::ros_messages::{MessageType, RosMessageType, geometry_msgs};
 use serde_derive::{Deserialize, Serialize};
 
 /// Implements the [`TFMessage`] of ROS2.

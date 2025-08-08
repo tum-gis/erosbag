@@ -9,5 +9,5 @@ description = "Library for processing ROS2 bags."
 
 
 [dependencies]
-erosbag-core = { version = "0.0.1-alpha.4", path = "../erosbag-core" }
-erosbag-transform = { version = "0.0.1-alpha.4", path = "../erosbag-transform" }
+erosbag-core = { version = "0.0.1-alpha.8", path = "../erosbag-core" }
+erosbag-transform = { version = "0.0.1-alpha.8", path = "../erosbag-transform" }

@@ -7,11 +7,11 @@ use crate::ros_messages::{MessageType, RosMessageType};
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::bagfile::point_cloud_extensions::RosPointCloudColumnType;
+use crate::bagfile::point_cloud_extensions::RosPointDataColumnType;
 use chrono::{DateTime, Utc};
 use image::{ImageBuffer, Rgb};
 use itertools::izip;
-use nalgebra::Point3;
+use nalgebra::{Isometry3, Point3};
 
 /// Implements the [`CompressedImage`] message of ROS2.
 ///
@@ -134,20 +134,23 @@ impl From<PointCloud2> for epoint::PointCloud {
         point_data.frame_id = Some(frame_id);
         let timestamp: Vec<DateTime<Utc>> = vec![item.header.stamp.into(); point_data.len()];
         point_data.timestamp = Some(timestamp);
-        let beam_origin: Vec<Point3<f64>> = vec![Point3::origin(); point_data.len()];
-        point_data.beam_origin = Some(beam_origin);
 
         let mut point_cloud = epoint::PointCloud::new(
             point_data,
             epoint::PointCloudInfo::new(None),
             ecoord::ReferenceFrames::default(),
         )
-        .unwrap();
+        .expect("creating point cloud should work");
+
+        point_cloud
+            .point_data
+            .add_unique_sensor_pose(Isometry3::identity())
+            .expect("Adding the origin should work");
 
         let point_id: Vec<u32> = (0..point_cloud.size()).map(|x| x as u32).collect();
         point_cloud
             .point_data
-            .add_u32_column(RosPointCloudColumnType::RosPointId.as_str(), point_id)
+            .add_u32_column(RosPointDataColumnType::RosPointId.as_str(), point_id)
             .expect("Extending the id column should work");
 
         point_cloud

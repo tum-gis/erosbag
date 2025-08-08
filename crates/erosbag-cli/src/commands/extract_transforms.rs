@@ -1,9 +1,13 @@
+use crate::error::Error;
 use ecoord::io::EcoordWriter;
-use erosbag::RosbagOpenOptions;
+use erosbag::Rosbag;
 use std::path::Path;
 use tracing::info;
 
-pub fn run(rosbag_directory_path: impl AsRef<Path>, output_ecoord_path: impl AsRef<Path>) {
+pub fn run(
+    rosbag_directory_path: impl AsRef<Path>,
+    output_ecoord_path: impl AsRef<Path>,
+) -> Result<(), Error> {
     info!("Start extracting transforms");
     info!("Rosbag path: {}", rosbag_directory_path.as_ref().display());
     info!(
@@ -11,19 +15,18 @@ pub fn run(rosbag_directory_path: impl AsRef<Path>, output_ecoord_path: impl AsR
         output_ecoord_path.as_ref().display()
     );
 
-    let rosbag = RosbagOpenOptions::new()
-        .read_write(true)
-        .open(rosbag_directory_path.as_ref())
-        .unwrap();
+    let rosbag = Rosbag::new(rosbag_directory_path.as_ref())?;
+    let o = rosbag.get_overview()?;
 
-    let reference_frame = rosbag.get_transforms(&None, &None).unwrap();
+    let reference_frame = rosbag.get_transforms(&None, &None, &None)?;
 
     info!(
         "Start writing to: {}",
         output_ecoord_path.as_ref().display()
     );
-    EcoordWriter::from_path(output_ecoord_path)
-        .unwrap()
-        .finish(&reference_frame)
-        .expect("TODO: panic message");
+    EcoordWriter::from_path(output_ecoord_path)?
+        .with_pretty_write(true)
+        .finish(&reference_frame)?;
+
+    Ok(())
 }

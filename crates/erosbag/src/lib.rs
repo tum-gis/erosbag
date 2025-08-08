@@ -7,7 +7,8 @@
 ///! # Data structure
 ///!
 pub use erosbag_core::{
-    ros_messages, topics, Error, RosPointCloudColumnType, Rosbag, RosbagOpenOptions,
+    ChannelId, ChannelTopic, ChunkId, Error, FileName, McapFile, MessageId, RosPointDataColumnType,
+    Rosbag, TopicId, dto, ros_messages, topics,
 };
 
 pub use erosbag_transform as transform;

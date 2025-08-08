@@ -6,37 +6,38 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.0.1-alpha.4"
+version = "0.0.1-alpha.8"
 authors = ["Benedikt Schwab <benedikt.schwab@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/envis-space/erosbag"
 
 [workspace.dependencies]
-epoint = { version = "0.0.1-alpha.4" }
-eimage = { version = "0.0.1-alpha.4" }
-ecoord = { version = "0.0.1-alpha.4" }
+epoint = { version = "0.0.1-alpha.8" }
+eimage = { version = "0.0.1-alpha.8" }
+ecoord = { version = "0.0.1-alpha.8" }
 
-clap = "4.5.13"
+thiserror = "2.0.12"
+anyhow = "1.0.98"
+clap = "4.5.42"
+humantime = "2.2.0"
 dotenvy = "0.15.7"
 walkdir = "2.5.0"
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
-diesel = "~2.2.2"
-diesel_migrations = "~2.2.0"
-r2d2 = "0.8.10"
-serde = "1.0.204"
-serde_derive = "1.0.204"
-serde_repr = "0.1.19"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+serde = "1.0.219"
+serde_derive = "1.0.219"
+serde_repr = "0.1.20"
 serde_yaml = "0.9.34"
 serde-big-array = "0.5.1"
 cdr = "0.2.4"
-thiserror = "1.0.63"
-polars = "0.41.3"
-ndarray = "0.16.0"
-indextree = "4.7.0"
+polars = "0.49.1"
+ndarray = "0.16.1"
+indextree = "4.7.4"
 rayon = "1.10.0"
-nalgebra = "0.33.0"
-chrono = "0.4.38"
-itertools = "0.13.0"
-image = "0.25.2"
+nalgebra = "0.34.0"
+chrono = "0.4.41"
+itertools = "0.14.0"
+image = "0.25.6"
+mcap = "0.23.2"
+memmap = "0.7.0"

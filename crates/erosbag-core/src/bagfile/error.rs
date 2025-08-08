@@ -13,12 +13,6 @@ pub enum BagFileError {
     EimageError(#[from] eimage::Error),
 
     #[error(transparent)]
-    R2D2Error(#[from] r2d2::Error),
-
-    #[error(transparent)]
-    DieselError(#[from] diesel::result::Error),
-
-    #[error(transparent)]
     CdrError(#[from] cdr::Error),
 
     #[error("topic with name `{0}` does not exist")]
