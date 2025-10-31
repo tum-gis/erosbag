@@ -7,7 +7,7 @@ use crate::{ChannelTopic, ChunkId, Error, MCAP_EXTENSION, dto};
 use chrono::{DateTime, Utc};
 use ecoord::ReferenceFrames;
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -87,11 +87,11 @@ impl Rosbag {
     }
 
     pub fn get_overview(&self) -> Result<dto::McapOverview, Error> {
-        let file_overviews: HashMap<FileName, McapFileOverview> = self
+        let file_overviews: BTreeMap<FileName, McapFileOverview> = self
             .mcap_files
             .iter()
             .map(|x| x.1.get_overview().map(|i| (x.0.clone(), i)))
-            .collect::<Result<HashMap<_, _>, _>>()?;
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
 
         let rosbag_overviews = McapOverview::new(file_overviews);
         Ok(rosbag_overviews)
@@ -117,6 +117,29 @@ impl Rosbag {
         Ok(total_start_date_time)
     }
 
+    pub fn get_start_date_time_of_channels(
+        &self,
+        channel_topics: &HashSet<ChannelTopic>,
+    ) -> Result<Option<DateTime<Utc>>, Error> {
+        let start_date_times: Vec<DateTime<Utc>> = channel_topics
+            .iter()
+            .flat_map(|topic| {
+                self.mcap_files
+                    .values()
+                    .filter_map(|mcap_file| {
+                        let channel_id = mcap_file.get_channel_id(topic).ok()?;
+                        mcap_file
+                            .get_start_date_time_of_channel(channel_id)
+                            .ok()
+                            .flatten()
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        Ok(start_date_times.into_iter().min())
+    }
+
     pub fn get_stop_date_time_of_channel(
         &self,
         channel_topic: &ChannelTopic,
@@ -135,6 +158,29 @@ impl Rosbag {
 
         let total_stop_date_time = stop_date_times.into_iter().max();
         Ok(total_stop_date_time)
+    }
+
+    pub fn get_stop_date_time_of_channels(
+        &self,
+        channel_topics: &HashSet<ChannelTopic>,
+    ) -> Result<Option<DateTime<Utc>>, Error> {
+        let start_date_times: Vec<DateTime<Utc>> = channel_topics
+            .iter()
+            .flat_map(|topic| {
+                self.mcap_files
+                    .values()
+                    .filter_map(|mcap_file| {
+                        let channel_id = mcap_file.get_channel_id(topic).ok()?;
+                        mcap_file
+                            .get_stop_date_time_of_channel(channel_id)
+                            .ok()
+                            .flatten()
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        Ok(start_date_times.into_iter().max())
     }
 
     fn get_file_within_date_times(
@@ -271,7 +317,7 @@ impl Rosbag {
         stop_date_time: &Option<DateTime<Utc>>,
         channel_topics: &HashSet<ChannelTopic>,
     ) -> Result<McapMessagePage, Error> {
-        let chunk_ids_to_read: Vec<(FileName, Vec<ChunkId>)> = self
+        let chunk_ids_to_read: BTreeMap<FileName, Vec<ChunkId>> = self
             .get_overview()?
             .get_chunk_ids_of_channel_topics(start_date_time, stop_date_time, channel_topics);
 

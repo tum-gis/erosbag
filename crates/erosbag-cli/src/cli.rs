@@ -2,6 +2,7 @@ use crate::util::parse_duration;
 use crate::util::parse_timestamp;
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand, ValueHint};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None, propagate_version = true)]
@@ -16,22 +17,22 @@ pub enum Commands {
     ExtractTransforms {
         /// Path to the ROS2 bag
         #[clap(long, value_hint = ValueHint::DirPath)]
-        rosbag_directory_path: String,
+        rosbag_directory_path: PathBuf,
 
         /// Path to the output ecoord file
         #[clap(long, value_hint = ValueHint::FilePath)]
-        output_ecoord_path: String,
+        output_ecoord_path: PathBuf,
     },
 
     /// Extract the point clouds
     ExtractPointClouds {
         /// Path to the ROS2 bag
         #[clap(long, value_hint = ValueHint::DirPath)]
-        rosbag_directory_path: String,
+        rosbag_directory_path: PathBuf,
 
         /// Path to the ecoord document
         #[clap(long, value_hint = ValueHint::FilePath)]
-        ecoord_file_path: Option<String>,
+        ecoord_file_path: Option<PathBuf>,
 
         /// The start time of the import in UTC.
         /// Example: 2020-04-12 22:10:57.123456789 +00:00
@@ -67,35 +68,35 @@ pub enum Commands {
 
         /// Path to the output epoint file containing the extracted point clouds
         #[clap(long, value_hint = ValueHint::FilePath)]
-        output_path: String,
+        output_path: PathBuf,
     },
 
     /// Extract the images
     ExtractImages {
         /// Path to the ROS2 bag
         #[clap(long, value_hint = ValueHint::DirPath)]
-        rosbag_directory_path: String,
+        rosbag_directory_path: PathBuf,
 
         /// Path to output eimage file containing the extracted images
-        #[clap(long)]
-        output_eimage_path: String,
+        #[clap(long, value_hint = ValueHint::FilePath)]
+        output_eimage_path: PathBuf,
     },
 
     /// Append the reference frames to a ROS bag
     CreateFromEcoord {
         /// Path to the directory containing reference frames
-        #[clap(long)]
-        reference_frames_directory_path: String,
+        #[clap(long, value_hint = ValueHint::FilePath)]
+        reference_frames_directory_path: PathBuf,
 
         /// Path to the ROS2 bag
         #[clap(long, value_hint = ValueHint::DirPath)]
-        rosbag_directory_path: String,
+        rosbag_directory_path: PathBuf,
     },
 
     /// Tests
     Test {
         /// Path to the ROS2 bag
         #[clap(long, value_hint = ValueHint::DirPath)]
-        rosbag_directory_path: String,
+        rosbag_directory_path: PathBuf,
     },
 }

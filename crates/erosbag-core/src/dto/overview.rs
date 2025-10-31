@@ -1,15 +1,15 @@
 use crate::ros_messages::RosMessageType;
 use crate::{ChannelId, ChannelTopic, ChunkId, FileName};
 use chrono::{DateTime, Utc};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct McapOverview {
-    pub files: HashMap<FileName, McapFileOverview>,
+    pub files: BTreeMap<FileName, McapFileOverview>,
 }
 
 impl McapOverview {
-    pub fn new(files: HashMap<FileName, McapFileOverview>) -> Self {
+    pub fn new(files: BTreeMap<FileName, McapFileOverview>) -> Self {
         Self { files }
     }
 
@@ -29,12 +29,22 @@ impl McapOverview {
             .collect()
     }
 
+    pub fn get_channel_topics_of_message_types(
+        &self,
+        ros_message_types: HashSet<RosMessageType>,
+    ) -> HashMap<RosMessageType, HashSet<ChannelTopic>> {
+        ros_message_types
+            .into_iter()
+            .map(|x| (x, self.get_channel_topics_of_message_type(x)))
+            .collect()
+    }
+
     pub fn get_chunk_ids_of_channel_topics(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
         stop_date_time: &Option<DateTime<Utc>>,
         channel_topics: &HashSet<ChannelTopic>,
-    ) -> Vec<(FileName, Vec<ChunkId>)> {
+    ) -> BTreeMap<FileName, Vec<ChunkId>> {
         self.files
             .iter()
             .map(|(i, x)| {

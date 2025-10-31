@@ -8,7 +8,7 @@ repository.workspace = true
 description = "Supplementary operations for processing ROS2 bags."
 
 [dependencies]
-erosbag-core = { version = "0.0.1-alpha.8", path = "../erosbag-core" }
+erosbag-core = { version = "0.0.1-alpha.9", path = "../erosbag-core" }
 
 epoint = { workspace = true }
 ecoord = { workspace = true }

@@ -25,7 +25,7 @@ pub fn run(
         output_ecoord_path.as_ref().display()
     );
     EcoordWriter::from_path(output_ecoord_path)?
-        .with_pretty_write(true)
+        .with_pretty(true)
         .finish(&reference_frame)?;
 
     Ok(())
