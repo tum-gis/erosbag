@@ -6,16 +6,16 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.0.1-alpha.9"
+version = "0.0.1-alpha.10"
 authors = ["Benedikt Schwab <benedikt.schwab@gmail.com>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/envis-space/erosbag"
 
 [workspace.dependencies]
-epoint = { version = "0.0.1-alpha.9" }
-eimage = { version = "0.0.1-alpha.9" }
-ecoord = { version = "0.0.1-alpha.9" }
+epoint = { version = "0.0.1-alpha.10" }
+eimage = { version = "0.0.1-alpha.10" }
+ecoord = { version = "0.0.1-alpha.10" }
 
 thiserror = "2.0.17"
 anyhow = "1.0.100"

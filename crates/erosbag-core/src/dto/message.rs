@@ -3,12 +3,14 @@ use crate::ros_messages::RosMessageType;
 use crate::ros_messages::{geometry_msgs, sensor_msgs};
 use crate::{ChannelTopic, ChunkId, Error, FileName, MessageId, ros_messages};
 use chrono::{DateTime, Utc};
-use ecoord::{FrameId, Transform, TransformId, TransformInfo};
+use ecoord::{
+    ExtrapolationMethod, FrameId, InterpolationMethod, TimedTransform, TransformEdge, TransformId,
+};
 use eimage::ImageSeries;
 use itertools::Itertools;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::str::FromStr;
 use tracing::warn;
 
@@ -153,6 +155,32 @@ impl McapMessagePage {
             .cloned()
             .collect()
     }
+
+    pub fn point_cloud_frame_ids_by_channel(&self) -> BTreeMap<ChannelTopic, BTreeSet<FrameId>> {
+        self.point_cloud_messages
+            .iter()
+            .map(|(channel_topic, messages)| {
+                let frame_ids = messages
+                    .iter()
+                    .map(|msg| msg.message.header.frame_id.clone().into())
+                    .collect::<BTreeSet<FrameId>>();
+                (channel_topic.clone(), frame_ids)
+            })
+            .collect()
+    }
+
+    pub fn image_frame_ids_by_channel(&self) -> BTreeMap<ChannelTopic, BTreeSet<FrameId>> {
+        self.image_messages
+            .iter()
+            .map(|(channel_topic, messages)| {
+                let frame_ids = messages
+                    .iter()
+                    .map(|msg| msg.message.header.frame_id.clone().into())
+                    .collect::<BTreeSet<FrameId>>();
+                (channel_topic.clone(), frame_ids)
+            })
+            .collect()
+    }
 }
 
 fn convert_message<T>(message: &McapMessageMeta<mcap::Message>) -> Result<McapMessageMeta<T>, Error>
@@ -211,25 +239,25 @@ impl McapMessagePage {
     pub fn get_point_cloud_messages_combined(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &Option<HashSet<ChannelTopic>>,
     ) -> Result<epoint::PointCloud, Error> {
         let point_cloud_messages =
-            self.get_point_cloud_messages(start_date_time, stop_date_time, channel_topics)?;
+            self.get_point_cloud_messages(start_date_time, end_date_time, channel_topics)?;
         let point_clouds = point_cloud_messages
             .into_par_iter()
             .map(|x| x.message)
             .collect();
 
         let mut merged_point_cloud = epoint::transform::merge(point_clouds)?;
-        merged_point_cloud.reference_frames = self.get_all_reference_frames()?;
+        merged_point_cloud.transform_tree = self.get_all_transform_tree()?;
         Ok(merged_point_cloud)
     }
 
     pub fn get_point_cloud_messages(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &Option<HashSet<ChannelTopic>>,
     ) -> Result<Vec<McapMessageMeta<epoint::PointCloud>>, Error> {
         let mut messages = if let Some(channel_topics) = channel_topics {
@@ -256,8 +284,8 @@ impl McapMessagePage {
             messages.retain(|x| *start_date_time <= x.log_date_time);
         }
 
-        if let Some(stop_date_time) = stop_date_time {
-            messages.retain(|x| x.log_date_time < *stop_date_time);
+        if let Some(end_date_time) = end_date_time {
+            messages.retain(|x| x.log_date_time < *end_date_time);
         }
 
         let point_clouds = messages
@@ -318,8 +346,8 @@ impl McapMessagePage {
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
 
-        let reference_frames = self.get_all_reference_frames()?;
-        let image_collection = eimage::ImageCollection::new(image_series, reference_frames)?;
+        let transform_tree = self.get_all_transform_tree()?;
+        let image_collection = eimage::ImageCollection::new(image_series, transform_tree)?;
         Ok(image_collection)
     }
 
@@ -345,46 +373,47 @@ impl McapMessagePage {
         Ok(image_series)
     }
 
-    pub fn get_all_reference_frames(&self) -> Result<ecoord::ReferenceFrames, Error> {
-        let mut transforms: HashMap<(ecoord::ChannelId, TransformId), Vec<ecoord::Transform>> =
+    pub fn get_all_transform_tree(&self) -> Result<ecoord::TransformTree, Error> {
+        let mut timed_transforms: HashMap<TransformId, Vec<ecoord::TimedTransform>> =
             HashMap::new();
-        let frame_info: HashMap<FrameId, ecoord::FrameInfo> = HashMap::new();
-        let channel_info: HashMap<ecoord::ChannelId, ecoord::ChannelInfo> = HashMap::new();
-        let transform_info: HashMap<TransformId, TransformInfo> = HashMap::new();
-
-        for (current_channel_id, current_messages) in &self.tf_messages {
+        for (current_channel_topic, current_messages) in &self.tf_messages {
             let tf_messages: Vec<geometry_msgs::TransformStamped> = current_messages
                 .iter()
                 .flat_map(|x| x.message.transforms.clone())
                 .collect();
-            let current_channel_id: ecoord::ChannelId = self
-                .get_channel_topics()
-                .get(current_channel_id)
-                .unwrap()
-                .clone()
-                .to_string()
-                .into();
             for current_tf_message in tf_messages.into_iter() {
-                let transform: Transform = (&current_tf_message).into();
+                let transform: TimedTransform = (&current_tf_message).into();
 
                 let current_frame_id: FrameId = current_tf_message.header.frame_id.into();
                 let current_child_frame_id: FrameId = current_tf_message.child_frame_id.into();
                 let current_transform_id =
                     TransformId::new(current_frame_id, current_child_frame_id);
 
-                transforms
-                    .entry((current_channel_id.clone(), current_transform_id))
+                timed_transforms
+                    .entry(current_transform_id)
                     .or_default()
                     .push(transform);
             }
         }
 
-        transforms.iter_mut().for_each(|(_, transforms_vec)| {
-            transforms_vec.sort_by_key(|transform| transform.timestamp);
-        });
+        let transform_edges: Vec<ecoord::TransformEdge> = timed_transforms
+            .into_par_iter()
+            .map(|(transform_id, mut transforms_vec)| {
+                transforms_vec.sort_by_key(|transform| transform.timestamp);
 
-        let merged_reference_frames =
-            ecoord::ReferenceFrames::new(transforms, frame_info, channel_info, transform_info)?;
-        Ok(merged_reference_frames)
+                let dynamic_transform = ecoord::DynamicTransform::new(
+                    transform_id.parent_frame_id,
+                    transform_id.child_frame_id,
+                    Some(InterpolationMethod::Linear),
+                    Some(ExtrapolationMethod::Constant),
+                    transforms_vec,
+                )?;
+                Ok(TransformEdge::Dynamic(dynamic_transform))
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        let frames: Vec<ecoord::FrameInfo> = Vec::new();
+        let merged_transform_tree = ecoord::TransformTree::new(transform_edges, frames)?;
+        Ok(merged_transform_tree)
     }
 }

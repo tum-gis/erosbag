@@ -114,10 +114,10 @@ impl From<Quaternion> for nalgebra::UnitQuaternion<f64> {
 impl From<nalgebra::UnitQuaternion<f64>> for Quaternion {
     fn from(item: nalgebra::UnitQuaternion<f64>) -> Self {
         Self {
-            w: item.w,
-            x: item.j,
+            x: item.i,
             y: item.j,
             z: item.k,
+            w: item.w,
         }
     }
 }
@@ -156,28 +156,28 @@ pub struct TransformStamped {
     pub transform: Transform,
 }
 
-impl From<&TransformStamped> for ecoord::Transform {
+impl From<&TransformStamped> for ecoord::TimedTransform {
     fn from(item: &TransformStamped) -> Self {
-        Self::new(
-            item.header.stamp.into(),
-            // None,
+        let transform = ecoord::Transform::new(
             item.transform.translation.into(),
             item.transform.rotation.into(),
-        )
+        );
+
+        Self::new(item.header.stamp.into(), transform)
     }
 }
 
-impl From<(&ecoord::TransformId, &ecoord::Transform)> for TransformStamped {
-    fn from(item: (&ecoord::TransformId, &ecoord::Transform)) -> Self {
+impl From<(&ecoord::TransformId, &ecoord::TimedTransform)> for TransformStamped {
+    fn from(item: (&ecoord::TransformId, &ecoord::TimedTransform)) -> Self {
         let header = std_msgs::Header {
             stamp: item.1.timestamp.into(),
-            frame_id: item.0.frame_id.clone().into(),
+            frame_id: item.0.parent_frame_id.clone().into(),
         };
 
         Self {
             header,
             child_frame_id: item.0.child_frame_id.clone().into(),
-            transform: item.1.isometry().into(),
+            transform: item.1.transform.isometry().into(),
         }
     }
 }

@@ -42,7 +42,7 @@ impl McapOverview {
     pub fn get_chunk_ids_of_channel_topics(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &HashSet<ChannelTopic>,
     ) -> BTreeMap<FileName, Vec<ChunkId>> {
         self.files
@@ -50,9 +50,33 @@ impl McapOverview {
             .map(|(i, x)| {
                 let chunk_ids = x.get_chunk_ids_containing_channel_ids(
                     start_date_time,
-                    stop_date_time,
+                    end_date_time,
                     &x.get_channel_ids_from_topics(channel_topics),
                 );
+
+                (i.clone(), chunk_ids)
+            })
+            .collect()
+    }
+
+    pub fn get_first_chunk_ids_of_channel_topics(
+        &self,
+        start_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
+        channel_topics: &HashSet<ChannelTopic>,
+    ) -> BTreeMap<FileName, Vec<ChunkId>> {
+        self.files
+            .iter()
+            .map(|(i, x)| {
+                let chunk_ids: Vec<ChunkId> = x
+                    .get_first_chunk_per_channel(
+                        start_date_time,
+                        end_date_time,
+                        &x.get_channel_ids_from_topics(channel_topics),
+                    )
+                    .values()
+                    .copied()
+                    .collect();
 
                 (i.clone(), chunk_ids)
             })
@@ -137,18 +161,39 @@ impl McapFileOverview {
     pub fn get_chunk_ids_containing_channel_ids(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_ids: &HashSet<ChannelId>,
     ) -> Vec<ChunkId> {
         self.chunks
             .values()
             .filter(|chunk| {
-                start_date_time.is_none_or(|start| chunk.stop_date_time >= start)
-                    && stop_date_time.is_none_or(|stop| chunk.start_date_time <= stop)
+                start_date_time.is_none_or(|start| chunk.end_date_time >= start)
+                    && end_date_time.is_none_or(|end| chunk.start_date_time <= end)
                     && !chunk.contained_channel.is_disjoint(channel_ids)
             })
             .map(|chunk| chunk.id)
             .collect()
+    }
+
+    pub fn get_first_chunk_per_channel(
+        &self,
+        start_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
+        channel_ids: &HashSet<ChannelId>,
+    ) -> HashMap<ChannelId, ChunkId> {
+        let mut channel_to_chunk = HashMap::new();
+
+        for chunk in self.chunks.values() {
+            if start_date_time.is_none_or(|start| chunk.end_date_time >= start)
+                && end_date_time.is_none_or(|end| chunk.start_date_time <= end)
+            {
+                for channel_id in chunk.contained_channel.intersection(channel_ids) {
+                    channel_to_chunk.entry(*channel_id).or_insert(chunk.id);
+                }
+            }
+        }
+
+        channel_to_chunk
     }
 }
 
@@ -177,7 +222,7 @@ impl ChannelOverview {
 pub struct ChunkOverview {
     pub id: ChunkId,
     pub start_date_time: DateTime<Utc>,
-    pub stop_date_time: DateTime<Utc>,
+    pub end_date_time: DateTime<Utc>,
     pub contained_channel: HashSet<ChannelId>,
 }
 
@@ -185,13 +230,13 @@ impl ChunkOverview {
     pub fn new(
         id: ChunkId,
         start_date_time: DateTime<Utc>,
-        stop_date_time: DateTime<Utc>,
+        end_date_time: DateTime<Utc>,
         contained_channel: HashSet<ChannelId>,
     ) -> Self {
         Self {
             id,
             start_date_time,
-            stop_date_time,
+            end_date_time,
             contained_channel,
         }
     }

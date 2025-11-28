@@ -90,7 +90,7 @@ impl McapFile {
         Ok(timestamp)
     }
 
-    pub fn get_stop_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
+    pub fn get_end_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
         let stats = self.stats()?;
         let timestamp = stats.map(|x| Utc.timestamp_nanos(x.message_end_time as i64));
         Ok(timestamp)
@@ -112,7 +112,7 @@ impl McapFile {
         Ok(date_time)
     }
 
-    pub fn get_stop_date_time_of_channel(
+    pub fn get_end_date_time_of_channel(
         &self,
         channel_id: ChannelId,
     ) -> Result<Option<DateTime<Utc>>, Error> {
@@ -223,7 +223,7 @@ impl McapFile {
     fn get_chunk_indices(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_id_selection: &Option<HashSet<ChannelId>>,
     ) -> Result<Vec<ChunkId>, Error> {
         let summary = self.summary()?.unwrap();
@@ -240,9 +240,9 @@ impl McapFile {
                 .retain(|x| *start_date_time <= Utc.timestamp_nanos(x.1.message_start_time as i64));
         }
 
-        if let Some(stop_date_time) = stop_date_time {
+        if let Some(end_date_time) = end_date_time {
             chunk_ids
-                .retain(|x| Utc.timestamp_nanos(x.1.message_end_time as i64) <= *stop_date_time);
+                .retain(|x| Utc.timestamp_nanos(x.1.message_end_time as i64) <= *end_date_time);
         }
 
         if let Some(channel_id_selection) = channel_id_selection {

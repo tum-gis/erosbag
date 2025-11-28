@@ -138,14 +138,9 @@ impl From<PointCloud2> for epoint::PointCloud {
         let mut point_cloud = epoint::PointCloud::new(
             point_data,
             epoint::PointCloudInfo::new(None),
-            ecoord::ReferenceFrames::default(),
+            ecoord::TransformTree::default(),
         )
         .expect("creating point cloud should work");
-
-        point_cloud
-            .point_data
-            .add_unique_sensor_pose(Isometry3::identity())
-            .expect("Adding the origin should work");
 
         let point_id: Vec<u32> = (0..point_cloud.size()).map(|x| x as u32).collect();
         point_cloud

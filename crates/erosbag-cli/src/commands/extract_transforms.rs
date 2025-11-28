@@ -18,7 +18,7 @@ pub fn run(
     let rosbag = Rosbag::new(rosbag_directory_path.as_ref())?;
     let o = rosbag.get_overview()?;
 
-    let reference_frame = rosbag.get_transforms(&None, &None, &None)?;
+    let transform_tree = rosbag.get_transforms(&None, &None, &None)?;
 
     info!(
         "Start writing to: {}",
@@ -26,7 +26,7 @@ pub fn run(
     );
     EcoordWriter::from_path(output_ecoord_path)?
         .with_pretty(true)
-        .finish(&reference_frame)?;
+        .finish(&transform_tree)?;
 
     Ok(())
 }

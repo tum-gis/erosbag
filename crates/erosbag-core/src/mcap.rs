@@ -5,7 +5,7 @@ use crate::mcap_file::McapFile;
 use crate::ros_messages::RosMessageType;
 use crate::{ChannelTopic, ChunkId, Error, MCAP_EXTENSION, dto};
 use chrono::{DateTime, Utc};
-use ecoord::ReferenceFrames;
+use ecoord::TransformTree;
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -61,11 +61,11 @@ impl Rosbag {
             .copied())
     }
 
-    pub fn get_stop_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
+    pub fn get_end_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
         Ok(self
             .mcap_files
             .iter()
-            .map(|(i, x)| x.get_stop_date_time())
+            .map(|(i, x)| x.get_end_date_time())
             .collect::<Result<Vec<_>, _>>()?
             .iter()
             .flatten()
@@ -140,27 +140,27 @@ impl Rosbag {
         Ok(start_date_times.into_iter().min())
     }
 
-    pub fn get_stop_date_time_of_channel(
+    pub fn get_end_date_time_of_channel(
         &self,
         channel_topic: &ChannelTopic,
     ) -> Result<Option<DateTime<Utc>>, Error> {
-        let stop_date_times: Vec<DateTime<Utc>> = self
+        let end_date_times: Vec<DateTime<Utc>> = self
             .mcap_files
             .values()
             .map(|x| {
                 let channel_id = x.get_channel_id(channel_topic)?;
-                x.get_stop_date_time_of_channel(channel_id)
+                x.get_end_date_time_of_channel(channel_id)
             })
             .collect::<Result<Vec<_>, Error>>()?
             .into_iter()
             .flatten()
             .collect();
 
-        let total_stop_date_time = stop_date_times.into_iter().max();
-        Ok(total_stop_date_time)
+        let total_end_date_time = end_date_times.into_iter().max();
+        Ok(total_end_date_time)
     }
 
-    pub fn get_stop_date_time_of_channels(
+    pub fn get_end_date_time_of_channels(
         &self,
         channel_topics: &HashSet<ChannelTopic>,
     ) -> Result<Option<DateTime<Utc>>, Error> {
@@ -172,7 +172,7 @@ impl Rosbag {
                     .filter_map(|mcap_file| {
                         let channel_id = mcap_file.get_channel_id(topic).ok()?;
                         mcap_file
-                            .get_stop_date_time_of_channel(channel_id)
+                            .get_end_date_time_of_channel(channel_id)
                             .ok()
                             .flatten()
                     })
@@ -186,7 +186,7 @@ impl Rosbag {
     fn get_file_within_date_times(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
     ) -> Vec<&McapFile> {
         self.mcap_files
             .values()
@@ -195,15 +195,15 @@ impl Rosbag {
                     .get_start_date_time()
                     .expect("should work")
                     .expect("should contain start date time");
-                let file_stop_date_time: DateTime<Utc> = x
-                    .get_stop_date_time()
+                let file_end_date_time: DateTime<Utc> = x
+                    .get_end_date_time()
                     .expect("should work")
-                    .expect("should contain stop date time");
+                    .expect("should contain end date time");
 
-                let within_start = start_date_time.is_none_or(|start| file_stop_date_time >= start);
-                let within_stop = stop_date_time.is_none_or(|stop| file_start_date_time <= stop);
+                let within_start = start_date_time.is_none_or(|start| file_end_date_time >= start);
+                let within_end = end_date_time.is_none_or(|end| file_start_date_time <= end);
 
-                within_start && within_stop
+                within_start && within_end
             })
             .sorted_by_key(|x| &x.file_name)
             .collect()
@@ -232,61 +232,61 @@ impl Rosbag {
     pub fn get_transforms(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &Option<HashSet<ChannelTopic>>,
-    ) -> Result<ReferenceFrames, Error> {
+    ) -> Result<TransformTree, Error> {
         let combined_page = self.get_message_page_with_type_fallback(
             start_date_time,
-            stop_date_time,
+            end_date_time,
             channel_topics,
             RosMessageType::Tf2MessagesTFMessage,
         )?;
-        let reference_frames = combined_page.get_all_reference_frames()?;
-        Ok(reference_frames)
+        let transform_tree = combined_page.get_all_transform_tree()?;
+        Ok(transform_tree)
     }
 
     /// Returns the point cloud of optionally selected channels for a time window between
-    /// start_date_time (inclusive) and stop_date_time (exclusive).
+    /// start_date_time (inclusive) and end_date_time (exclusive).
     pub fn get_point_clouds(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &Option<HashSet<ChannelTopic>>,
     ) -> Result<epoint::PointCloud, Error> {
         let combined_page = self.get_message_page_with_type_fallback(
             start_date_time,
-            stop_date_time,
+            end_date_time,
             channel_topics,
             RosMessageType::SensorMessagesPointCloud2,
         )?;
         let point_cloud = combined_page.get_point_cloud_messages_combined(
             start_date_time,
-            stop_date_time,
+            end_date_time,
             channel_topics,
         )?;
         Ok(point_cloud)
     }
 
     /// Returns the point cloud with transforms of optionally selected channels for a time window between
-    /// start_date_time (inclusive) and stop_date_time (exclusive).
+    /// start_date_time (inclusive) and end_date_time (exclusive).
     pub fn get_point_clouds_with_transforms(
         &self,
         point_cloud_start_date_time: &Option<DateTime<Utc>>,
-        point_cloud_stop_date_time: &Option<DateTime<Utc>>,
+        point_cloud_end_date_time: &Option<DateTime<Utc>>,
         point_cloud_channel_topics: &Option<HashSet<ChannelTopic>>,
         transforms_start_date_time: &Option<DateTime<Utc>>,
-        transforms_stop_date_time: &Option<DateTime<Utc>>,
+        transforms_end_date_time: &Option<DateTime<Utc>>,
         transforms_channel_topics: &Option<HashSet<ChannelTopic>>,
     ) -> Result<epoint::PointCloud, Error> {
         let mut point_cloud = self.get_point_clouds(
             point_cloud_start_date_time,
-            point_cloud_stop_date_time,
+            point_cloud_end_date_time,
             point_cloud_channel_topics,
         )?;
 
-        point_cloud.reference_frames = self.get_transforms(
+        point_cloud.transform_tree = self.get_transforms(
             transforms_start_date_time,
-            transforms_stop_date_time,
+            transforms_end_date_time,
             transforms_channel_topics,
         )?;
 
@@ -294,16 +294,16 @@ impl Rosbag {
     }
 
     /// Returns the images of optionally selected channels for a time window between
-    /// start_date_time (inclusive) and stop_date_time (exclusive).
+    /// start_date_time (inclusive) and end_date_time (exclusive).
     pub fn get_images(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &Option<HashSet<ChannelTopic>>,
     ) -> Result<eimage::ImageCollection, Error> {
         let combined_page = self.get_message_page_with_type_fallback(
             start_date_time,
-            stop_date_time,
+            end_date_time,
             channel_topics,
             RosMessageType::SensorMessagesImage,
         )?;
@@ -314,12 +314,36 @@ impl Rosbag {
     pub fn get_message_page(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &HashSet<ChannelTopic>,
     ) -> Result<McapMessagePage, Error> {
         let chunk_ids_to_read: BTreeMap<FileName, Vec<ChunkId>> = self
             .get_overview()?
-            .get_chunk_ids_of_channel_topics(start_date_time, stop_date_time, channel_topics);
+            .get_chunk_ids_of_channel_topics(start_date_time, end_date_time, channel_topics);
+
+        let mut pages: Vec<McapMessagePage> = Vec::new();
+        for (current_file, current_chunk_ids) in chunk_ids_to_read {
+            let current_page = self.get_message_page_with_chunk_ids(
+                &current_file,
+                &current_chunk_ids,
+                &Some(channel_topics.clone()),
+            )?;
+
+            pages.push(current_page);
+        }
+        let combined_page = McapMessagePage::combine(pages);
+        Ok(combined_page)
+    }
+
+    pub fn get_message_page_of_first_chunk_per_channel_topic(
+        &self,
+        start_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
+        channel_topics: &HashSet<ChannelTopic>,
+    ) -> Result<McapMessagePage, Error> {
+        let chunk_ids_to_read: BTreeMap<FileName, Vec<ChunkId>> = self
+            .get_overview()?
+            .get_first_chunk_ids_of_channel_topics(start_date_time, end_date_time, channel_topics);
 
         let mut pages: Vec<McapMessagePage> = Vec::new();
         for (current_file, current_chunk_ids) in chunk_ids_to_read {
@@ -338,7 +362,7 @@ impl Rosbag {
     fn get_message_page_with_type_fallback(
         &self,
         start_date_time: &Option<DateTime<Utc>>,
-        stop_date_time: &Option<DateTime<Utc>>,
+        end_date_time: &Option<DateTime<Utc>>,
         channel_topics: &Option<HashSet<ChannelTopic>>,
         message_type_fallback: RosMessageType,
     ) -> Result<McapMessagePage, Error> {
@@ -350,6 +374,6 @@ impl Rosbag {
                     .get_channel_topics_of_message_type(message_type_fallback)
             };
 
-        self.get_message_page(start_date_time, stop_date_time, &relevant_channel_topics)
+        self.get_message_page(start_date_time, end_date_time, &relevant_channel_topics)
     }
 }

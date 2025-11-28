@@ -2,6 +2,7 @@ use crate::util::parse_duration;
 use crate::util::parse_timestamp;
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand, ValueHint};
+use ecoord::FrameId;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -40,11 +41,11 @@ pub enum Commands {
         #[clap(long, value_parser = parse_timestamp)]
         start_date_time: Option<DateTime<Utc>>,
 
-        /// The stop time of the import in UTC.
+        /// The end time of the import in UTC.
         /// Example: 2020-04-12 22:10:57.123456789 +00:00
         /// If not provided, the import runs until the end of the available data.
         #[clap(long, value_parser = parse_timestamp)]
-        stop_date_time: Option<DateTime<Utc>>,
+        end_date_time: Option<DateTime<Utc>>,
 
         /// The time offset applied to the rosbag import.
         /// Example: "5s" (5 seconds), "2m" (2 minutes).
@@ -54,7 +55,7 @@ pub enum Commands {
 
         /// The total duration of the rosbag import.
         /// Example: "30s" (30 seconds), "1h" (1 hour).
-        /// If not provided, the import runs until the stop time or the end of the data.
+        /// If not provided, the import runs until the end time or the end of the data.
         #[clap(long, value_parser = parse_duration)]
         total_duration: Option<chrono::Duration>,
 
@@ -64,7 +65,7 @@ pub enum Commands {
 
         /// Target frame id of extracted point cloud
         #[clap(long)]
-        target_frame_id: Option<String>,
+        target_frame_id: Option<FrameId>,
 
         /// Path to the output epoint file containing the extracted point clouds
         #[clap(long, value_hint = ValueHint::FilePath)]
@@ -82,11 +83,11 @@ pub enum Commands {
         output_eimage_path: PathBuf,
     },
 
-    /// Append the reference frames to a ROS bag
+    /// Append the transform tree to a ROS bag
     CreateFromEcoord {
-        /// Path to the directory containing reference frames
+        /// Path to the directory containing transform tree
         #[clap(long, value_hint = ValueHint::FilePath)]
-        reference_frames_directory_path: PathBuf,
+        transform_tree_directory_path: PathBuf,
 
         /// Path to the ROS2 bag
         #[clap(long, value_hint = ValueHint::DirPath)]

@@ -31,7 +31,7 @@ pub enum BagFileError {
     RequestedTimeInvalid {
         requested_time: chrono::DateTime<Utc>,
         bag_start_time: chrono::DateTime<Utc>,
-        bag_stop_time: chrono::DateTime<Utc>,
+        bag_end_time: chrono::DateTime<Utc>,
     },
 
     #[error("path is not a directory")]

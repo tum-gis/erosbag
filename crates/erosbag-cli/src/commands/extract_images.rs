@@ -21,10 +21,10 @@ pub fn run(
 
     let start_date_time: DateTime<Utc> =
         rosbag.get_start_date_time()?.unwrap() + Duration::seconds(5);
-    let stop_date_time: DateTime<Utc> = start_date_time + Duration::seconds(1);
+    let end_date_time: DateTime<Utc> = start_date_time + Duration::seconds(1);
 
     let image_collection =
-        rosbag.get_images(&Some(start_date_time), &Some(stop_date_time), &None)?;
+        rosbag.get_images(&Some(start_date_time), &Some(end_date_time), &None)?;
 
     fs::create_dir_all(output_eimage_path.as_ref().parent().expect("should exist"))?;
     info!("Extracted {} images.", image_collection.total_image_count());
