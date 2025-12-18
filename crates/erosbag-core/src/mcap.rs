@@ -23,8 +23,7 @@ impl Rosbag {
             .filter(|x| x.path().is_file())
             .filter(|x| x.path().extension() == Some(std::ffi::OsStr::new(MCAP_EXTENSION)))
             .sorted_by_key(|x| x.path())
-            .enumerate()
-            .map(|(i, x)| {
+            .map(|x| {
                 McapFile::new(
                     x.path().file_stem().unwrap().to_str().unwrap().into(),
                     x.path(),
@@ -52,8 +51,8 @@ impl Rosbag {
     pub fn get_start_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
         Ok(self
             .mcap_files
-            .iter()
-            .map(|(i, x)| x.get_start_date_time())
+            .values()
+            .map(|x| x.get_start_date_time())
             .collect::<Result<Vec<_>, _>>()?
             .iter()
             .flatten()
@@ -64,8 +63,8 @@ impl Rosbag {
     pub fn get_end_date_time(&self) -> Result<Option<DateTime<Utc>>, Error> {
         Ok(self
             .mcap_files
-            .iter()
-            .map(|(i, x)| x.get_end_date_time())
+            .values()
+            .map(|x| x.get_end_date_time())
             .collect::<Result<Vec<_>, _>>()?
             .iter()
             .flatten()
@@ -76,8 +75,8 @@ impl Rosbag {
     pub fn contains_channel(&self, channel_topic: &ChannelTopic) -> Result<bool, Error> {
         let contains_channel = self
             .mcap_files
-            .iter()
-            .map(|(i, x)| {
+            .values()
+            .map(|x| {
                 let channel_id = x.get_channel_id(channel_topic)?;
                 x.contains_channel(channel_id)
             })

@@ -16,7 +16,7 @@ pub fn run(
     );
 
     let rosbag = Rosbag::new(rosbag_directory_path.as_ref())?;
-    let o = rosbag.get_overview()?;
+    let _o = rosbag.get_overview()?;
 
     let transform_tree = rosbag.get_transforms(&None, &None, &None)?;
 

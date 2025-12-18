@@ -376,7 +376,7 @@ impl McapMessagePage {
     pub fn get_all_transform_tree(&self) -> Result<ecoord::TransformTree, Error> {
         let mut timed_transforms: HashMap<TransformId, Vec<ecoord::TimedTransform>> =
             HashMap::new();
-        for (current_channel_topic, current_messages) in &self.tf_messages {
+        for current_messages in self.tf_messages.values() {
             let tf_messages: Vec<geometry_msgs::TransformStamped> = current_messages
                 .iter()
                 .flat_map(|x| x.message.transforms.clone())

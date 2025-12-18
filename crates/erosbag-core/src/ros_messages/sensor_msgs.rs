@@ -11,7 +11,7 @@ use crate::bagfile::point_cloud_extensions::RosPointDataColumnType;
 use chrono::{DateTime, Utc};
 use image::{ImageBuffer, Rgb};
 use itertools::izip;
-use nalgebra::{Isometry3, Point3};
+use nalgebra::Point3;
 
 /// Implements the [`CompressedImage`] message of ROS2.
 ///

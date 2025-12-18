@@ -164,7 +164,7 @@ impl McapFile {
         let found_channel = summary
             .channels
             .iter()
-            .find(|(i, x)| x.topic == channel_topic.to_string())
+            .find(|(_i, x)| x.topic == channel_topic.to_string())
             .ok_or(Error::ChannelWithTopicDoesNotExist(channel_topic.clone()))?;
 
         Ok(ChannelId::from(*found_channel.0))
@@ -197,8 +197,8 @@ impl McapFile {
         let channel_ids = summary
             .channels
             .iter()
-            .filter(|(i, x)| x.schema.clone().unwrap().name.as_str() == message_type.as_str())
-            .map(|(i, x)| ChannelId::from(*i))
+            .filter(|(_i, x)| x.schema.clone().unwrap().name.as_str() == message_type.as_str())
+            .map(|(i, _x)| ChannelId::from(*i))
             .collect::<HashSet<ChannelId>>();
         Ok(channel_ids)
     }
@@ -214,8 +214,8 @@ impl McapFile {
         let channel_ids = summary
             .channels
             .iter()
-            .filter(|(i, x)| message_types_str.contains(x.schema.clone().unwrap().name.as_str()))
-            .map(|(i, x)| ChannelId::from(*i))
+            .filter(|(_i, x)| message_types_str.contains(x.schema.clone().unwrap().name.as_str()))
+            .map(|(i, _x)| ChannelId::from(*i))
             .collect::<HashSet<ChannelId>>();
         Ok(channel_ids)
     }

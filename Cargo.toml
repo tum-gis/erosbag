@@ -6,37 +6,37 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.0.1-alpha.10"
+version = "0.0.1-alpha.12"
 authors = ["Benedikt Schwab <benedikt.schwab@gmail.com>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/envis-space/erosbag"
 
 [workspace.dependencies]
-epoint = { version = "0.0.1-alpha.10" }
-eimage = { version = "0.0.1-alpha.10" }
-ecoord = { version = "0.0.1-alpha.10" }
+epoint = { version = "0.0.1-alpha.12" }
+eimage = { version = "0.0.1-alpha.12" }
+ecoord = { version = "0.0.1-alpha.12" }
 
 thiserror = "2.0.17"
 anyhow = "1.0.100"
-clap = "4.5.51"
+clap = "4.5.53"
 humantime = "2.3.0"
 walkdir = "2.5.0"
-tracing = "0.1.41"
-tracing-subscriber = "0.3.20"
+tracing = "0.1.43"
+tracing-subscriber = "0.3.22"
 serde = "1.0.228"
 serde_derive = "1.0.228"
 serde_repr = "0.1.20"
 serde_yaml = "0.9.34"
 serde-big-array = "0.5.1"
 cdr = "0.2.4"
-polars = "0.51.0"
-ndarray = "0.16.1"
+polars = "0.52.0"
+ndarray = "0.17.1"
 indextree = "4.7.4"
 rayon = "1.11.0"
 nalgebra = "0.34.1"
 chrono = "0.4.42"
 itertools = "0.14.0"
-image = "0.25.8"
-mcap = "0.23.3"
+image = "0.25.9"
+mcap = "0.24.0"
 memmap = "0.7.0"

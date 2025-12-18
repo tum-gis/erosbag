@@ -58,8 +58,8 @@ fn main() -> Result<()> {
             )?;
         }
         Commands::CreateFromEcoord {
-            transform_tree_directory_path,
-            rosbag_directory_path,
+            transform_tree_directory_path: _,
+            rosbag_directory_path: _,
         } => {
 
             /*erosbag::transform::append_transform_tree(
